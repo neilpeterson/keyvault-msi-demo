@@ -1,0 +1,194 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"FQDNPrefix": {
+			"type": "string"
+        },
+        "keyVaultName": {
+            "type": "string",
+            "metadata": {
+              "description": "Specifies the name of the key vault."
+            }
+          },
+          "secretsObject": {
+            "type": "secureObject",
+            "defaultValue": "{}",
+            "metadata": {
+              "description": "Specifies all secrets {\"secretName\":\"\",\"secretValue\":\"\"} wrapped in a secure object."
+            }
+          }
+	},
+	"variables": {
+		"aciName": "[concat(parameters('FQDNPrefix'), '-bootstrap')]",
+		"rgname": "[resourceGroup().name]",
+		"bootstrapRoleAssignmentId": "[guid(concat(resourceGroup().id, 'contributor'))]",
+		"identityName": "bootstrap-creds",
+		"contributorRoleDefinitionId": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Authorization/roleDefinitions/', 'b24988ac-6180-42a0-ab88-20f7382dd24c')]",
+		"storageAccountName": "[toLower(uniqueString(resourceGroup().id))]",
+		"containerName": "logs",
+		"deploymentImage": "neilpeterson/itt-bootstrap",
+		"sourceRepo": "https://github.com/neilpeterson/keyvault-msi-demo.git",
+        "entrypoint": "/keyvault-msi-demo/deployment-artifacts/deployment/deploy.sh",
+        "secretsObject": "{}"
+	},
+	"resources": [{
+			"type": "Microsoft.ManagedIdentity/userAssignedIdentities",
+			"name": "bootstrap-creds",
+			"apiVersion": "2018-11-30",
+			"location": "[resourceGroup().location]"
+		},
+		{
+			"type": "Microsoft.Authorization/roleAssignments",
+			"apiVersion": "2018-09-01-preview",
+			"name": "[variables('bootstrapRoleAssignmentId')]",
+			"dependsOn": [
+				"[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('identityName'))]"
+			],
+			"properties": {
+				"roleDefinitionId": "[variables('contributorRoleDefinitionId')]",
+				"principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('identityName')), '2015-08-31-preview').principalId]",
+				"scope": "[resourceGroup().id]",
+				"principalType": "ServicePrincipal"
+			}
+		},
+		{
+            "name": "[variables('storageAccountName')]",
+            "type": "Microsoft.Storage/storageAccounts",
+            "apiVersion": "2018-07-01",
+            "location": "[resourceGroup().location]",
+            "kind": "StorageV2",
+            "sku": {
+                "name": "Standard_LRS",
+                "tier": "Standard"
+            },
+            "properties": {
+                "accessTier": "Hot"
+            },
+            "resources": [
+                {
+                    "name": "[concat('default/', variables('containerName'))]",
+                    "type": "blobServices/containers",
+                    "apiVersion": "2018-07-01",
+                    "dependsOn": [
+                        "[variables('storageAccountName')]"
+                    ]
+                }
+            ]
+        },
+        {
+            "type": "Microsoft.KeyVault/vaults",
+            "name": "[parameters('keyVaultName')]",
+            "location": "[resourceGroup().location]",
+            "apiVersion": "2018-02-14",
+            "tags": {
+              "displayName": "KeyVault"
+            },
+            "properties": {
+              "enabledForDeployment": true,
+              "enabledForTemplateDeployment": true,
+              "enabledForDiskEncryption": true,
+              "tenantId": "[subscription().tenantId]",
+              "accessPolicies": [
+                {
+                  "objectId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('identityName')), '2015-08-31-preview').principalId]",
+                  "tenantId": "[subscription().tenantId]",
+                  "permissions": {
+                    "keys": ["get"],
+                    "secrets": ["get"]
+                  }
+                }
+              ],
+              "sku": {
+                "name": "standard",
+                "family": "A"
+              },
+              "networkAcls": {
+                "value": {
+                  "defaultAction": "Allow",
+                  "bypass": "AzureServices"
+                }
+              }
+            }
+          },
+          {
+            "type": "Microsoft.KeyVault/vaults/secrets",
+            "name": "[concat(parameters('keyVaultName'), '/', parameters('secretsObject').secrets[copyIndex()].secretName)]",
+            "apiVersion": "2018-02-14",
+            "dependsOn": [
+              "[concat('Microsoft.KeyVault/vaults/', parameters('keyVaultName'))]"
+            ],
+            "copy": {
+              "name": "secretsCopy",
+              "count": "[length(parameters('secretsObject').secrets)]"
+            },
+            "properties": {
+              "value": "[parameters('secretsObject').secrets[copyIndex()].secretValue]"
+            }
+          }
+		{
+			"type": "Microsoft.ContainerInstance/containerGroups",
+			"apiVersion": "2018-10-01",
+			"name": "[variables('aciName')]",
+			"location": "[resourceGroup().location]",
+			"dependsOn": [
+				"[resourceId('Microsoft.Authorization/roleAssignments', variables('bootstrapRoleAssignmentId'))]",
+				"[variables('storageAccountName')]"
+			],
+			"identity": {
+				"type": "UserAssigned",
+				"userAssignedIdentities": {
+					"[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('identityName'))]": {}
+				}
+			},
+			"properties": {
+				"osType": "Linux",
+				"restartPolicy": "OnFailure",
+				"containers": [{
+					"name": "azure-cli",
+					"properties": {
+						"image": "[variables('deploymentImage')]",
+						"command": [
+							"/bin/sh",
+							"-c",
+							"sh /boot-strap.sh"
+						],
+						"resources": {
+							"requests": {
+								"cpu": 1,
+								"memoryInGB": 1
+							}
+						},
+						"environmentVariables": [
+							{
+								"name": "RESOURCE_GROUP_NAME",
+								"secureValue": "[variables('rgname')]"
+							},
+							{
+								"name": "AZURE_STORAGE_ACCOUNT",
+								"secureValue": "[variables('storageAccountName')]"
+							},
+							{
+								"name": "AZURE_STORAGE_KEY",
+								"secureValue": "[listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), providers('Microsoft.Storage', 'storageAccounts').apiVersions[0]).keys[0].value]"
+							},
+							{
+								"name": "MANAGED_IDENTITY",
+								"secureValue": "[concat(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('identityName')))]"
+							},
+							{
+								"name": "SOURCE_REPOSITORY",
+								"secureValue": "[variables('sourceRepo')]"
+							},
+							{
+								"name": "ENTRYPOINT",
+								"secureValue": "[variables('entrypoint')]"
+							}
+						]
+					}
+				}]
+			}
+		}
+	],
+	"outputs": {}
+}
