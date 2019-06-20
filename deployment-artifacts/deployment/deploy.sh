@@ -1,1 +1,1 @@
-echo "test"
+echo $(az keyvault secret show --name $SECRET_NAME --vault-name $VAULT_NAME --query value -o tsv)

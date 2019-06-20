@@ -2,10 +2,19 @@
 	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
 	"contentVersion": "1.0.0.0",
 	"parameters": {
-		"FQDNPrefix": {
-			"type": "string"
-		},
 		"keyVaultName": {
+			"type": "string",
+			"metadata": {
+				"description": "Specifies the name of the key vault."
+			}
+		},
+		"secretName": {
+			"type": "string",
+			"metadata": {
+				"description": "Specifies the name of the key vault."
+			}
+		},
+		"secretValue": {
 			"type": "string",
 			"metadata": {
 				"description": "Specifies the name of the key vault."
@@ -13,7 +22,7 @@
 		}
 	},
 	"variables": {
-		"aciName": "[concat(parameters('FQDNPrefix'), '-bootstrap')]",
+		"aciName": "bootstrap",
 		"rgname": "[resourceGroup().name]",
 		"bootstrapRoleAssignmentId": "[guid(concat(resourceGroup().id, 'contributor'))]",
 		"identityName": "bootstrap-creds",
@@ -22,7 +31,7 @@
 		"containerName": "logs",
 		"deploymentImage": "neilpeterson/itt-bootstrap",
 		"sourceRepo": "https://github.com/neilpeterson/keyvault-msi-demo.git",
-		"entrypoint": "/keyvault-msi-demo/deployment-artifacts/deployment/deploy.sh",
+		"entrypoint": "/deployment-artifacts/deployment/deploy.sh",
 		"secretsObject": "{}"
 	},
 	"resources": [{
@@ -110,13 +119,13 @@
 		},
 		{
 			"type": "Microsoft.KeyVault/vaults/secrets",
-			"name": "[concat(parameters('keyVaultName'), '/testSecret')]",
+			"name": "[concat(parameters('keyVaultName'), '/', parameters('secretName'))]",
 			"apiVersion": "2018-02-14",
 			"dependsOn": [
 				"[concat('Microsoft.KeyVault/vaults/', parameters('keyVaultName'))]"
 			],
 			"properties": {
-				"value": "wallawalla123"
+				"value": "parameters('secretValue')"
 			}
 		},
 		{
@@ -152,7 +161,8 @@
 								"memoryInGB": 1
 							}
 						},
-						"environmentVariables": [{
+						"environmentVariables": [
+							{
 								"name": "RESOURCE_GROUP_NAME",
 								"secureValue": "[variables('rgname')]"
 							},
@@ -175,6 +185,14 @@
 							{
 								"name": "ENTRYPOINT",
 								"secureValue": "[variables('entrypoint')]"
+							},
+							{
+								"name": "SECRET_NAME",
+								"secureValue": "[parameters('secretName')]"
+							},
+							{
+								"name": "ENTRYPOINT",
+								"secureValue": "[parameters('secretValue')]"
 							}
 						]
 					}
