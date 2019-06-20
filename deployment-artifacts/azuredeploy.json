@@ -188,11 +188,11 @@
 							},
 							{
 								"name": "SECRET_NAME",
-								"secureValue": "parameters('secretName')"
+								"secureValue": "[parameters('secretName')]"
 							},
 							{
 								"name": "VAULT_NAME",
-								"secureValue": "parameters('keyVaultName')"
+								"secureValue": "[parameters('keyVaultName')]"
 							}
 						]
 					}
