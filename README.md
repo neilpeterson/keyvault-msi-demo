@@ -6,19 +6,17 @@ This template deployed Aure Key Vault, creates a secret, and returns the secret 
     <img src="http://azuredeploy.net/deploybutton.png"/>
 </a>
 
-This is the script that is run inside fo the container:
+Fill out the form and click purchase.
+
+![](./images/form.jpg)
+
+During the deployment, the following script is run inside of the bootstrap container.
 
 ```
 echo "Vault Name: $VAULT_NAME"
 echo "Secret Name: $SECRET_NAME"
 echo "Secret Value: $(az keyvault secret show --name $SECRET_NAME --vault-name $VAULT_NAME --query value -o tsv)"
 ```
-
-# Validate test
-
-Fill out the form and click purchase.
-
-![](./images/form.jpg)
 
 Once the deployment has completed, select the **boostrap** container instance > **Containers** > **Logs** > Select the contianer.
 
