@@ -125,7 +125,7 @@
 				"[concat('Microsoft.KeyVault/vaults/', parameters('keyVaultName'))]"
 			],
 			"properties": {
-				"value": "parameters('secretValue')"
+				"value": "[parameters('secretValue')]"
 			}
 		},
 		{
