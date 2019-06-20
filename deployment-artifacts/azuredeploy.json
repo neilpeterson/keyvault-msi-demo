@@ -4,20 +4,13 @@
 	"parameters": {
 		"FQDNPrefix": {
 			"type": "string"
-        },
-        "keyVaultName": {
-            "type": "string",
-            "metadata": {
-              "description": "Specifies the name of the key vault."
-            }
-          },
-          "secretsObject": {
-            "type": "secureObject",
-            "defaultValue": "{}",
-            "metadata": {
-              "description": "Specifies all secrets {\"secretName\":\"\",\"secretValue\":\"\"} wrapped in a secure object."
-            }
-          }
+		},
+		"keyVaultName": {
+			"type": "string",
+			"metadata": {
+				"description": "Specifies the name of the key vault."
+			}
+		}
 	},
 	"variables": {
 		"aciName": "[concat(parameters('FQDNPrefix'), '-bootstrap')]",
@@ -29,8 +22,8 @@
 		"containerName": "logs",
 		"deploymentImage": "neilpeterson/itt-bootstrap",
 		"sourceRepo": "https://github.com/neilpeterson/keyvault-msi-demo.git",
-        "entrypoint": "/keyvault-msi-demo/deployment-artifacts/deployment/deploy.sh",
-        "secretsObject": "{}"
+		"entrypoint": "/keyvault-msi-demo/deployment-artifacts/deployment/deploy.sh",
+		"secretsObject": "{}"
 	},
 	"resources": [{
 			"type": "Microsoft.ManagedIdentity/userAssignedIdentities",
@@ -53,79 +46,79 @@
 			}
 		},
 		{
-            "name": "[variables('storageAccountName')]",
-            "type": "Microsoft.Storage/storageAccounts",
-            "apiVersion": "2018-07-01",
-            "location": "[resourceGroup().location]",
-            "kind": "StorageV2",
-            "sku": {
-                "name": "Standard_LRS",
-                "tier": "Standard"
-            },
-            "properties": {
-                "accessTier": "Hot"
-            },
-            "resources": [
-                {
-                    "name": "[concat('default/', variables('containerName'))]",
-                    "type": "blobServices/containers",
-                    "apiVersion": "2018-07-01",
-                    "dependsOn": [
-                        "[variables('storageAccountName')]"
-                    ]
-                }
-            ]
-        },
-        {
-            "type": "Microsoft.KeyVault/vaults",
-            "name": "[parameters('keyVaultName')]",
-            "location": "[resourceGroup().location]",
-            "apiVersion": "2018-02-14",
-            "tags": {
-              "displayName": "KeyVault"
-            },
-            "properties": {
-              "enabledForDeployment": true,
-              "enabledForTemplateDeployment": true,
-              "enabledForDiskEncryption": true,
-              "tenantId": "[subscription().tenantId]",
-              "accessPolicies": [
-                {
-                  "objectId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('identityName')), '2015-08-31-preview').principalId]",
-                  "tenantId": "[subscription().tenantId]",
-                  "permissions": {
-                    "keys": ["get"],
-                    "secrets": ["get"]
-                  }
-                }
-              ],
-              "sku": {
-                "name": "standard",
-                "family": "A"
-              },
-              "networkAcls": {
-                "value": {
-                  "defaultAction": "Allow",
-                  "bypass": "AzureServices"
-                }
-              }
-            }
-          },
-          {
-            "type": "Microsoft.KeyVault/vaults/secrets",
-            "name": "[concat(parameters('keyVaultName'), '/', parameters('secretsObject').secrets[copyIndex()].secretName)]",
-            "apiVersion": "2018-02-14",
-            "dependsOn": [
-              "[concat('Microsoft.KeyVault/vaults/', parameters('keyVaultName'))]"
-            ],
-            "copy": {
-              "name": "secretsCopy",
-              "count": "[length(parameters('secretsObject').secrets)]"
-            },
-            "properties": {
-              "value": "[parameters('secretsObject').secrets[copyIndex()].secretValue]"
-            }
-          }
+			"name": "[variables('storageAccountName')]",
+			"type": "Microsoft.Storage/storageAccounts",
+			"apiVersion": "2018-07-01",
+			"location": "[resourceGroup().location]",
+			"kind": "StorageV2",
+			"sku": {
+				"name": "Standard_LRS",
+				"tier": "Standard"
+			},
+			"properties": {
+				"accessTier": "Hot"
+			},
+			"resources": [{
+				"name": "[concat('default/', variables('containerName'))]",
+				"type": "blobServices/containers",
+				"apiVersion": "2018-07-01",
+				"dependsOn": [
+					"[variables('storageAccountName')]"
+				]
+			}]
+		},
+		{
+			"type": "Microsoft.KeyVault/vaults",
+			"name": "[parameters('keyVaultName')]",
+			"location": "[resourceGroup().location]",
+			"apiVersion": "2018-02-14",
+			"tags": {
+				"displayName": "KeyVault"
+			},
+			"properties": {
+				"enabledForDeployment": true,
+				"enabledForTemplateDeployment": true,
+				"enabledForDiskEncryption": true,
+				"tenantId": "[subscription().tenantId]",
+				"accessPolicies": [{
+					"objectId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('identityName')), '2015-08-31-preview').principalId]",
+					"tenantId": "[subscription().tenantId]",
+					"permissions": {
+						"keys": ["get"],
+						"secrets": [
+							"get",
+							"list",
+							"set",
+							"delete",
+							"recover",
+							"backup",
+							"restore"
+						  ]
+					}
+				}],
+				"sku": {
+					"name": "standard",
+					"family": "A"
+				},
+				"networkAcls": {
+					"value": {
+						"defaultAction": "Allow",
+						"bypass": "AzureServices"
+					}
+				}
+			}
+		},
+		{
+			"type": "Microsoft.KeyVault/vaults/secrets",
+			"name": "[concat(parameters('keyVaultName'), '/testSecret')]",
+			"apiVersion": "2018-02-14",
+			"dependsOn": [
+				"[concat('Microsoft.KeyVault/vaults/', parameters('keyVaultName'))]"
+			],
+			"properties": {
+				"value": "wallawalla123"
+			}
+		},
 		{
 			"type": "Microsoft.ContainerInstance/containerGroups",
 			"apiVersion": "2018-10-01",
@@ -159,8 +152,7 @@
 								"memoryInGB": 1
 							}
 						},
-						"environmentVariables": [
-							{
+						"environmentVariables": [{
 								"name": "RESOURCE_GROUP_NAME",
 								"secureValue": "[variables('rgname')]"
 							},
