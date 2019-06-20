@@ -191,7 +191,7 @@
 								"secureValue": "[parameters('secretName')]"
 							},
 							{
-								"name": "VAULT_NAME ",
+								"name": "VAULT_NAME",
 								"secureValue": "[parameters('keyVaultName')]"
 							}
 						]

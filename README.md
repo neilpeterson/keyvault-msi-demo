@@ -6,6 +6,11 @@ This template deployed Aure Key Vault, creates a secret, and returns the secret 
     <img src="http://azuredeploy.net/deploybutton.png"/>
 </a>
 
-Fill out the form:
+# Validate test
+
+Fill our the form and click purchase.
 
 ![](./images/form.jpg)
+
+Once the deployment has completed, select the container >
+
