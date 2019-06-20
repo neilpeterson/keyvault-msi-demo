@@ -12,5 +12,5 @@ Fill our the form and click purchase.
 
 ![](./images/form.jpg)
 
-Once the deployment has completed, select the container >
+Once the deployment has completed, select the **boostrap** container instance > **Containers** > **Logs**
 
