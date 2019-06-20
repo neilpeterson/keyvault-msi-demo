@@ -20,4 +20,4 @@ echo "Secret Value: $(az keyvault secret show --name $SECRET_NAME --vault-name $
 
 Once the deployment has completed, select the **boostrap** container instance > **Containers** > **Logs** > Select the contianer.
 
-![](./images/reslts.jpg)
+![](./images/results.jpg)
