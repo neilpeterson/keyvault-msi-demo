@@ -191,8 +191,8 @@
 								"secureValue": "[parameters('secretName')]"
 							},
 							{
-								"name": "ENTRYPOINT",
-								"secureValue": "[parameters('secretValue')]"
+								"name": "VAULT_NAME ",
+								"secureValue": "[parameters('keyVaultName')]"
 							}
 						]
 					}
